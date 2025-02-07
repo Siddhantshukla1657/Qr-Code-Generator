@@ -16,6 +16,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            overflow-y: auto;
         }
         .container {
             background: rgba(255, 255, 255, 0.1);
@@ -28,9 +29,6 @@
             gap: 15px;
             width: 90%;
             max-width: 500px;
-        }
-        h1 {
-            margin-bottom: 10px;
         }
         input, button, select {
             width: 100%;
@@ -67,7 +65,7 @@
             align-items: center;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/qr-code-styling/lib/qr-code-styling.js"></script>
 </head>
 <body>
     <div class="container">
@@ -84,91 +82,55 @@
             <option value="400">400x400</option>
             <option value="500" selected>500x500</option>
             <option value="800">800x800</option>
-            <option value="1080">1080x1080</option>
-            <option value="1440">1440x1440</option>
-            <option value="2160">2160x2160</option>
-            <option value="3840">3840x3840 (4K)</option>
         </select>
 
         <select id="shape">
-            <option value="square" selected>Sharp Edges</option>
-            <option value="rounded">Rounded Edges</option>
+            <option value="square" selected>Sharp</option>
+            <option value="rounded">Rounded</option>
         </select>
 
         <button onclick="generateQR()">Generate QR</button>
-        <div id="qrcode-container">
-            <canvas id="qrcodeCanvas"></canvas>
-        </div>
+        <div id="qrcode-container"></div>
         <button id="download" style="display:none;" onclick="downloadQR()">Download QR</button>
     </div>
 
     <script>
+        let qrCode;
+
         function generateQR() {
             let link = document.getElementById("link").value;
-            let logoFile = document.getElementById("logo").files[0];
             let qrColor = document.getElementById("qrColor").value;
             let bgColor = document.getElementById("bgColor").value;
             let size = parseInt(document.getElementById("size").value);
             let shape = document.getElementById("shape").value;
-            let qrCanvas = document.getElementById("qrcodeCanvas");
-            let ctx = qrCanvas.getContext("2d");
+            let logoFile = document.getElementById("logo").files[0];
 
             if (!link) {
                 alert("Please enter a URL to generate the QR code.");
                 return;
             }
 
-            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-
-            let qr = new QRCode(document.createElement("div"), {
-                text: link,
+            let options = {
                 width: size,
                 height: size,
-                colorDark: qrColor,
-                colorLight: bgColor,
-                correctLevel: QRCode.CorrectLevel.H
-            });
+                data: link,
+                image: logoFile ? URL.createObjectURL(logoFile) : undefined,
+                dotsOptions: {
+                    color: qrColor,
+                    type: shape === "rounded" ? "rounded" : "square"
+                },
+                backgroundOptions: { color: bgColor },
+                imageOptions: { crossOrigin: "anonymous", margin: 10 }
+            };
 
-            setTimeout(() => {
-                let qrImage = qr._el.firstChild;
-                let qrSize = size;
-                qrCanvas.width = qrSize;
-                qrCanvas.height = qrSize;
-                ctx.fillStyle = bgColor;
-                ctx.fillRect(0, 0, qrSize, qrSize);
-                ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
-
-                if (logoFile) {
-                    let reader = new FileReader();
-                    reader.onload = function(event) {
-                        let img = new Image();
-                        img.src = event.target.result;
-                        img.onload = function() {
-                            let logoSize = qrSize / 4;
-                            let xPos = (qrSize - logoSize) / 2;
-                            let yPos = (qrSize - logoSize) / 2;
-
-                            ctx.fillStyle = bgColor;
-                            ctx.beginPath();
-                            ctx.arc(qrSize / 2, qrSize / 2, logoSize / 2 + 10, 0, 2 * Math.PI);
-                            ctx.fill();
-
-                            ctx.drawImage(img, xPos, yPos, logoSize, logoSize);
-                        };
-                    };
-                    reader.readAsDataURL(logoFile);
-                }
-
-                document.getElementById("download").style.display = "block";
-            }, 500);
+            qrCode = new QRCodeStyling(options);
+            document.getElementById("qrcode-container").innerHTML = "";
+            qrCode.append(document.getElementById("qrcode-container"));
+            document.getElementById("download").style.display = "block";
         }
 
         function downloadQR() {
-            let qrCanvas = document.getElementById("qrcodeCanvas");
-            let link = document.createElement("a");
-            link.href = qrCanvas.toDataURL("image/png");
-            link.download = "qrcode.png";
-            link.click();
+            qrCode.download({ name: "qrcode", extension: "png" });
         }
     </script>
 </body>
